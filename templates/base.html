@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
       <div class="container header-content">
         <a class="brand" href="{{ url_for('index') }}" aria-label="FreshNest Laundry home">
@@ -26,8 +27,10 @@
             <li><a href="{{ url_for('index') }}#how-it-works">How it works</a></li>
             {% if session.get('role') == 'customer' %}
               <li><a href="{{ url_for('customer_dashboard') }}">My bookings</a></li>
+              <li><a href="{{ url_for('profile') }}">Profile</a></li>
             {% elif session.get('role') == 'admin' %}
               <li><a href="{{ url_for('admin_dashboard') }}">Admin panel</a></li>
+              <li><a href="{{ url_for('profile') }}">Profile</a></li>
             {% endif %}
           </ul>
         </nav>
@@ -56,13 +59,16 @@
       {% if messages %}
         <div class="container flash-stack" role="status" aria-live="polite">
           {% for category, message in messages %}
-            <div class="flash-alert flash-alert--{{ category }}">{{ message }}</div>
+            <div class="flash-alert flash-alert--{{ category }}">
+              <span>{{ message }}</span>
+              <button class="flash-dismiss" type="button" aria-label="Dismiss message">&times;</button>
+            </div>
           {% endfor %}
         </div>
       {% endif %}
     {% endwith %}
 
-    <main>
+    <main id="main-content" tabindex="-1">
       {% block content %}{% endblock %}
     </main>
 
@@ -70,15 +76,15 @@
       <div class="container footer-grid">
         <section>
           <h2 class="footer-title"><i class="fa-regular fa-clock" aria-hidden="true"></i> Operating hours</h2>
-          <p class="footer-copy">Monday – Saturday<br><strong>7:00 AM – 8:00 PM</strong><br><br>Sunday<br><strong>8:00 AM – 6:00 PM</strong></p>
+          <p class="footer-copy">Monday – Saturday<br><strong>{{ operating_weekday_hours }}</strong><br><br>Sunday<br><strong>{{ operating_sunday_hours }}</strong></p>
         </section>
         <section>
           <h2 class="footer-title"><i class="fa-solid fa-location-dot" aria-hidden="true"></i> Location</h2>
-          <p class="footer-copy">Blk 12, Lot 8, Barangay San Isidro<br>Antipolo City, Rizal 1870<br><br>Near San Isidro Elementary School</p>
+          <p class="footer-copy">{{ shop_address }}<br><br>Near San Isidro Elementary School</p>
         </section>
         <section>
           <h2 class="footer-title"><i class="fa-solid fa-phone" aria-hidden="true"></i> Contact us</h2>
-          <p class="footer-copy">0917 123 4567<br>0920 987 6543<br><br><a href="mailto:hello@freshnest.ph">hello@freshnest.ph</a></p>
+          <p class="footer-copy">{{ shop_phone }}<br>0920 987 6543<br><br><a href="mailto:hello@freshnest.ph">hello@freshnest.ph</a></p>
         </section>
         <section>
           <h2 class="footer-title">Follow FreshNest</h2>

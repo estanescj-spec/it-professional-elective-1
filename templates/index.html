@@ -99,6 +99,7 @@
         <form action="{{ url_for('customer_dashboard') }}" method="post">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
           <div class="form-grid">
+            <div class="form-section-heading">Service &amp; payment</div>
             <div class="form-field">
               <label class="form-label" for="landing_customer_name">Customer name</label>
               <input class="form-control" id="landing_customer_name" name="customer_name" type="text" value="{{ session.get('user_name') }}" readonly>
@@ -116,23 +117,26 @@
               <input class="form-control" id="landing_weight" name="weight_kg" type="number" min="0.1" max="{{ max_weight_kg }}" step="0.1" placeholder="For example, 3.5" required>
             </div>
             <div class="form-field">
-              <label class="form-label" for="landing_pickup_date">Pickup date</label>
-              <input class="form-control" id="landing_pickup_date" name="pickup_date" type="date" min="{{ pickup_min }}" max="{{ pickup_max }}" required>
-            </div>
-            <div class="form-field">
-              <label class="form-label" for="landing_pickup_time">Pickup time</label>
-              <select class="form-control" id="landing_pickup_time" name="pickup_time" data-weekday-slots='{{ weekday_pickup_slots|tojson }}' data-sunday-slots='{{ sunday_pickup_slots|tojson }}' required>
-                <option value="">Choose a date first</option>
-              </select>
-            </div>
-            <div class="form-field">
               <label class="form-label" for="landing_payment">Payment method</label>
               <select class="form-control" id="landing_payment" name="payment_method" required>
                 {% for method in payment_methods %}
                   <option value="{{ method }}">{{ method }}</option>
                 {% endfor %}
               </select>
+              <span class="form-help">Simulated payment only. Never enter card numbers.</span>
             </div>
+            <div class="form-section-heading">Schedule</div>
+            <div class="form-field">
+              <label class="form-label" for="landing_pickup_date">Pickup date</label>
+              <input class="form-control" id="landing_pickup_date" name="pickup_date" type="date" min="{{ pickup_min }}" max="{{ pickup_max }}" required>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="landing_pickup_time">Pickup time</label>
+              <select class="form-control" id="landing_pickup_time" name="pickup_time" data-today="{{ today }}" data-current-time="{{ current_time }}" data-weekday-slots='{{ weekday_pickup_slots|tojson }}' data-sunday-slots='{{ sunday_pickup_slots|tojson }}' required>
+                <option value="">Choose a date first</option>
+              </select>
+            </div>
+            <div class="form-section-heading">Pickup details</div>
             <div class="form-field form-field--full">
               <label class="form-label" for="landing_address">Pickup address</label>
               <input class="form-control" id="landing_address" name="address" type="text" maxlength="300" autocomplete="street-address" required>
@@ -141,11 +145,12 @@
               <label class="form-label" for="landing_contact">Contact number</label>
               <input class="form-control" id="landing_contact" name="contact_number" type="tel" maxlength="30" autocomplete="tel" required>
             </div>
-            <div class="form-field form-field--full price-preview" data-price-preview data-rate-select="landing_service_type" data-weight-input="landing_weight" data-per-kg-rate="{{ per_kg_rate }}">
-              <span>Service <strong data-price-base>₱0.00</strong></span>
-              <span>Weight charge <strong data-price-weight>₱0.00</strong></span>
-              <span>Estimated total <strong data-price-total>₱0.00</strong></span>
-              <small>₱{{ "%.2f"|format(per_kg_rate) }} per kg · maximum {{ max_weight_kg }} kg</small>
+            <div class="form-field form-field--full price-preview" data-price-preview data-rate-select="landing_service_type" data-weight-input="landing_weight" data-per-kg-rate="{{ per_kg_rate }}" data-max-weight="{{ max_weight_kg }}">
+              <span data-price-message>Enter weight to see price. Maximum {{ max_weight_kg }} kg.</span>
+              <span>Service <strong data-price-base>—</strong></span>
+              <span>Weight charge <strong data-price-weight>—</strong></span>
+              <span>Estimated total <strong data-price-total>—</strong></span>
+              <small>Final price is confirmed after pickup and actual weighing.</small>
             </div>
           </div>
           <div class="booking-form-actions">

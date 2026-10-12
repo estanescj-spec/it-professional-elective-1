@@ -14,10 +14,12 @@
       <span class="account-pill"><i class="fa-solid fa-list-check" aria-hidden="true"></i> {{ stats.total_orders or 0 }} total orders</span>
     </div>
 
-    <div class="summary-grid">
+    <div class="summary-grid summary-grid--admin">
       <article class="summary-card"><span>Total orders</span><strong>{{ stats.total_orders or 0 }}</strong></article>
       <article class="summary-card"><span>Pending</span><strong>{{ stats.pending_count or 0 }}</strong></article>
-      <article class="summary-card"><span>Revenue (excludes cancelled)</span><strong>₱{{ "%.2f"|format(stats.revenue or 0) }}</strong></article>
+      <article class="summary-card"><span>Today’s pickups</span><strong>{{ stats.pickups_today or 0 }}</strong></article>
+      <article class="summary-card"><span>Unpaid amount</span><strong>₱{{ "%.2f"|format(stats.unpaid_amount or 0) }}</strong></article>
+      <article class="summary-card"><span>Paid revenue (excludes cancelled)</span><strong>₱{{ "%.2f"|format(stats.revenue or 0) }}</strong></article>
     </div>
 
     <section class="surface-card" aria-labelledby="all-orders-title">
@@ -37,6 +39,13 @@
           <label class="form-label" for="order-search">Customer or order number</label>
           <input class="form-control" id="order-search" name="q" type="search" value="{{ search }}" maxlength="80" placeholder="Name or #123">
         </div>
+        <div class="form-field">
+          <label class="form-label" for="order-sort">Sort orders</label>
+          <select class="form-control" id="order-sort" name="sort">
+            <option value="newest" {% if sort == 'newest' %}selected{% endif %}>Newest first</option>
+            <option value="pickup" {% if sort == 'pickup' %}selected{% endif %}>Pickup date</option>
+          </select>
+        </div>
         <button class="button button--primary" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Search</button>
         <a class="button button--secondary" href="{{ url_for('admin_dashboard') }}">Clear</a>
       </form>
@@ -46,16 +55,13 @@
           <thead>
             <tr>
               <th scope="col">Order</th>
-              <th scope="col">Customer</th>
-              <th scope="col">Address / Contact</th>
-              <th scope="col">Service</th>
-              <th scope="col">Weight</th>
-              <th scope="col">Total</th>
-              <th scope="col">Payment</th>
+              <th scope="col">Customer &amp; details</th>
+              <th scope="col">Service / weight</th>
+              <th scope="col">Price</th>
               <th scope="col">Pickup</th>
               <th scope="col">Status</th>
               <th scope="col">Update status</th>
-              <th scope="col">Payment action</th>
+              <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -63,13 +69,12 @@
               {% set status_class = order.status|lower|replace(' ', '-') %}
               <tr>
                 <td><strong>#{{ order.id }}</strong></td>
-                <td>{{ order.customer_name }}</td>
-                <td>{{ order.address }}<br><span class="form-help">{{ order.contact_number }}</span></td>
-                <td>{{ order.service_type }}</td>
-                <td>{{ order.weight_kg }} kg</td>
-                <td>₱{{ "%.2f"|format(order.total_price) }}</td>
-                <td>{{ order.payment_method }}<br><span class="payment-badge">{{ order.payment_status }}</span></td>
-                <td>{{ order.pickup_date }}<br>{{ order.pickup_time }}</td>
+                <td><strong>{{ order.customer_name }}</strong><details class="admin-order-details"><summary>Contact &amp; history</summary><p>{{ order.address or "No address" }}<br>{{ order.contact_number or "No phone" }}<br>{{ order.payment_method }} · {{ order.payment_status }}{% if order.payment_reference %}<br>Reference: {{ order.payment_reference }}{% endif %}</p><ol class="event-timeline">{% for event in order.events %}<li>{{ event.status }} · {{ event.changed_at|display_datetime }} <span>by {{ event.changed_by }}</span></li>{% endfor %}</ol></details></td>
+                <td>{{ order.service_type }}<br><span class="form-help">Estimate: {{ order.weight_kg }} kg{% if order.actual_weight_kg %}<br>Actual: {{ order.actual_weight_kg }} kg{% endif %}</span>
+                  {% if order.status != 'Cancelled' %}<form class="inline-form actual-weight-form" action="{{ url_for('update_weight', order_id=order.id) }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="visually-hidden" for="actual-weight-{{ order.id }}">Actual weight for order {{ order.id }}</label><input class="compact-select actual-weight-input" id="actual-weight-{{ order.id }}" name="actual_weight_kg" type="number" min="0.1" max="{{ max_weight_kg }}" step="0.1" value="{{ order.actual_weight_kg or '' }}" placeholder="Actual kg" required><button class="button button--primary button--small" type="submit">Set final</button></form>{% endif %}
+                </td>
+                <td>{% if not order.actual_weight_kg %}<span class="form-help">Estimated</span><br>{% endif %}₱{{ "%.2f"|format(order.total_price) }}</td>
+                <td>{{ order.pickup_date }}<br>{{ order.pickup_time|display_pickup_time }}</td>
                 <td><span class="status-badge status-badge--{{ status_class }}">{{ order.status }}</span></td>
                 <td>
                   {% if status_transitions[order.status] %}
@@ -89,10 +94,20 @@
                 </td>
                 <td>
                   {% if order.payment_status == 'Unpaid' and order.status != 'Cancelled' %}
-                    <form class="inline-form" action="{{ url_for('mark_paid', order_id=order.id) }}" method="post">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button class="button button--secondary button--small" type="submit">Mark paid</button>
-                    </form>
+                    {% if order.actual_weight_kg %}
+                      <button class="button button--secondary button--small" type="button" data-open-dialog="payment-{{ order.id }}">Mark paid</button>
+                      <dialog class="confirm-dialog" id="payment-{{ order.id }}">
+                        <form action="{{ url_for('mark_paid', order_id=order.id) }}" method="post">
+                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                          <h3>Confirm payment for order #{{ order.id }}</h3>
+                          <p>This action cannot be undone. Confirm that ₱{{ "%.2f"|format(order.total_price) }} was received.</p>
+                          {% if order.payment_method != 'Cash on Delivery' %}
+                            <div class="form-field"><label class="form-label" for="payment-reference-{{ order.id }}">GCash/card transaction reference</label><input class="form-control" id="payment-reference-{{ order.id }}" name="payment_reference" maxlength="100" required><span class="form-help">Demo payment only. Never enter card numbers.</span></div>
+                          {% endif %}
+                          <div class="dialog-actions"><button class="button button--secondary" type="button" data-close-dialog>Go back</button><button class="button button--primary" type="submit">Confirm payment</button></div>
+                        </form>
+                      </dialog>
+                    {% else %}<span class="form-help">Enter actual weight first</span>{% endif %}
                   {% elif order.status == 'Cancelled' and order.payment_status == 'Unpaid' %}
                     <span class="form-help">Cancelled</span>
                   {% else %}
@@ -102,7 +117,7 @@
               </tr>
             {% else %}
               <tr>
-                <td class="empty-state" colspan="11"><i class="fa-regular fa-rectangle-list" aria-hidden="true"></i>No orders match these filters.</td>
+                <td class="empty-state" colspan="8"><i class="fa-regular fa-rectangle-list" aria-hidden="true"></i>No orders match these filters.</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -113,13 +128,20 @@
         <span>Page {{ page }} of {{ total_pages }} · {{ total_matching }} matching orders</span>
         <div class="pagination-actions">
           {% if page > 1 %}
-            <a class="button button--secondary button--small" href="{{ url_for('admin_dashboard', status=status_filter, q=search, page=page - 1) }}">Previous</a>
+            <a class="button button--secondary button--small" href="{{ url_for('admin_dashboard', status=status_filter, q=search, sort=sort, page=page - 1) }}">Previous</a>
           {% endif %}
           {% if page < total_pages %}
-            <a class="button button--secondary button--small" href="{{ url_for('admin_dashboard', status=status_filter, q=search, page=page + 1) }}">Next</a>
+            <a class="button button--secondary button--small" href="{{ url_for('admin_dashboard', status=status_filter, q=search, sort=sort, page=page + 1) }}">Next</a>
           {% endif %}
         </div>
       </nav>
+    </section>
+    <section class="surface-card admin-users" aria-labelledby="customer-accounts-title">
+      <h2 class="card-heading" id="customer-accounts-title">Customer accounts</h2>
+      <p class="card-intro">Reset an account’s password when a customer cannot sign in. Share temporary passwords privately.</p>
+      <div class="table-wrap"><table class="data-table"><thead><tr><th>Customer</th><th>Email</th><th>Temporary password reset</th></tr></thead><tbody>
+        {% for user in users %}<tr><td>{{ user.full_name }}</td><td>{{ user.email }}</td><td><form class="inline-form" action="{{ url_for('admin_reset_password', user_id=user.id) }}" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label class="visually-hidden" for="reset-password-{{ user.id }}">Temporary password</label><input class="compact-select" id="reset-password-{{ user.id }}" name="new_password" type="password" minlength="8" maxlength="128" required><button class="button button--secondary button--small" type="submit">Reset password</button></form></td></tr>{% else %}<tr><td class="empty-state" colspan="3">No customer accounts yet.</td></tr>{% endfor %}
+      </tbody></table></div>
     </section>
   </div>
 </section>

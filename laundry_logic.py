@@ -4,12 +4,17 @@ import math
 import os
 import shutil
 import tempfile
+import threading
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_FILE = Path(
     os.environ.get("FRESHNEST_BACKUP_PATH", BASE_DIR / "data" / "backup_orders.json")
 ).resolve()
+MANILA_TZ = ZoneInfo("Asia/Manila")
+BACKUP_LOCK = threading.RLock()
+BACKUP_RETENTION_COUNT = 20
 SERVICE_RATES = {
     "Wash & Fold": 180.0,
     "Comforter Wash": 250.0,
@@ -68,6 +73,11 @@ def load_json_backup(path=None):
 def save_json_backup(orders_list, path=None):
     """Atomically save orders, preserving each previous backup with a timestamp."""
     backup_file = Path(path) if path is not None else DATA_FILE
+    with BACKUP_LOCK:
+        return _save_json_backup_locked(orders_list, backup_file)
+
+
+def _save_json_backup_locked(orders_list, backup_file):
     temporary_path = None
     try:
         backup_file.parent.mkdir(parents=True, exist_ok=True)
@@ -79,6 +89,13 @@ def save_json_backup(orders_list, path=None):
                 backup_file,
                 backup_dir / f"{backup_file.stem}_{timestamp}{backup_file.suffix}",
             )
+            old_backups = sorted(
+                backup_dir.glob(f"{backup_file.stem}_*{backup_file.suffix}"),
+                key=lambda item: item.stat().st_mtime,
+                reverse=True,
+            )
+            for expired_backup in old_backups[BACKUP_RETENTION_COUNT:]:
+                expired_backup.unlink()
 
         with tempfile.NamedTemporaryFile(
             mode="w",
@@ -106,8 +123,9 @@ def save_json_backup(orders_list, path=None):
 
 def sync_backup(connection):
     """Write the database's complete order list to the JSON backup."""
-    rows = connection.execute("SELECT * FROM orders ORDER BY id").fetchall()
-    return save_json_backup([dict(row) for row in rows])
+    with BACKUP_LOCK:
+        rows = connection.execute("SELECT * FROM orders ORDER BY id").fetchall()
+        return _save_json_backup_locked([dict(row) for row in rows], DATA_FILE)
 
 
 def validate_pickup_date(date_str, pickup_time=None, today=None, now=None):
@@ -121,7 +139,8 @@ def validate_pickup_date(date_str, pickup_time=None, today=None, now=None):
     if pickup_date.isoformat() != date_str:
         return None, "Please enter a valid pickup date."
 
-    current_date = today or datetime.date.today()
+    manila_now = datetime.datetime.now(MANILA_TZ)
+    current_date = today or manila_now.date()
     if pickup_date < current_date:
         return None, "Pickup date cannot be in the past."
     if pickup_date > current_date + datetime.timedelta(days=MAX_PICKUP_DAYS):
@@ -137,7 +156,7 @@ def validate_pickup_date(date_str, pickup_time=None, today=None, now=None):
             return None, "That pickup time is outside our operating hours for the selected day."
         if pickup_date == current_date:
             scheduled_time = datetime.datetime.strptime(pickup_time, "%H:%M").time()
-            current_time = now or datetime.datetime.now().time()
+            current_time = now or manila_now.time().replace(tzinfo=None)
             if scheduled_time <= current_time:
                 return None, "Choose a pickup time that has not already passed."
     return pickup_date.isoformat(), None

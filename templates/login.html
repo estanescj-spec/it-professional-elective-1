@@ -13,15 +13,20 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-field">
           <label class="form-label" for="email">Email address</label>
-          <input class="form-control" id="email" name="email" type="email" maxlength="254" autocomplete="email" required>
+          <input class="form-control" id="email" name="email" type="email" maxlength="254" autocomplete="email" value="{{ email|default('') }}" required>
         </div>
         <div class="form-field">
           <label class="form-label" for="password">Password</label>
-          <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+          <div class="password-field-wrap">
+            <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" required>
+            <button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false" aria-controls="password" data-password-toggle="password">
+              <i class="fa-regular fa-eye" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
         <button class="button button--primary" type="submit">Sign in <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
       </form>
-      <p class="auth-switch">New to FreshNest? <a href="{{ url_for('register') }}">Create a customer account</a></p>
+      <p class="auth-switch">New to FreshNest? <a href="{{ url_for('register') }}">Create Account</a></p>
     </div>
   </div>
 </section>

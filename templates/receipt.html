@@ -8,17 +8,18 @@
     <article class="receipt-card" id="printable-receipt">
       <header class="receipt-brand">
         <span class="brand-name">FreshNest</span>
-        <p>LAUNDRY · Official booking receipt</p>
+        <p>LAUNDRY · {{ "PAID" if order.payment_status == "Paid" else "UNPAID" }} BOOKING RECEIPT</p>
+        <p>{{ shop_address }}<br>{{ shop_phone }}</p>
       </header>
-      <p class="receipt-meta">Order #{{ order.id }} &nbsp;·&nbsp; Booked {{ order.created_at }}</p>
+      <p class="receipt-meta">Order #{{ order.id }} &nbsp;·&nbsp; Booked {{ order.created_at|display_datetime }}</p>
 
       <dl class="receipt-lines">
         <div class="receipt-line"><dt>Customer</dt><dd>{{ order.customer_name }}</dd></div>
         <div class="receipt-line"><dt>Service</dt><dd>{{ order.service_type }}</dd></div>
         <div class="receipt-line"><dt>Pickup address</dt><dd>{{ order.address or "Not recorded" }}</dd></div>
         <div class="receipt-line"><dt>Contact number</dt><dd>{{ order.contact_number or "Not recorded" }}</dd></div>
-        <div class="receipt-line"><dt>Laundry weight</dt><dd>{{ order.weight_kg }} kg</dd></div>
-        <div class="receipt-line"><dt>Pickup date &amp; time</dt><dd>{{ order.pickup_date }} · {{ order.pickup_time }}</dd></div>
+        <div class="receipt-line"><dt>Laundry weight</dt><dd>{{ receipt_weight }} kg{% if not order.actual_weight_kg %} (estimated){% endif %}</dd></div>
+        <div class="receipt-line"><dt>Pickup date &amp; time</dt><dd>{{ order.pickup_date }} · {{ order.pickup_time|display_pickup_time }}</dd></div>
         <div class="receipt-line"><dt>Payment method</dt><dd>{{ order.payment_method }}</dd></div>
         <div class="receipt-line"><dt>Payment status</dt><dd>{{ order.payment_status }}</dd></div>
         <div class="receipt-line"><dt>Order status</dt><dd><span class="status-badge status-badge--{{ order.status|lower|replace(' ', '-') }}">{{ order.status }}</span></dd></div>
@@ -26,12 +27,13 @@
 
       <dl class="receipt-lines price-breakdown">
         <div class="receipt-line"><dt>{{ order.service_type }} service</dt><dd>₱{{ "%.2f"|format(breakdown.base_price) }}</dd></div>
-        <div class="receipt-line"><dt>{{ order.weight_kg }} kg × ₱{{ "%.2f"|format(per_kg_rate) }}</dt><dd>₱{{ "%.2f"|format(breakdown.weight_charge) }}</dd></div>
+        <div class="receipt-line"><dt>{{ receipt_weight }} kg × ₱{{ "%.2f"|format(per_kg_rate) }}</dt><dd>₱{{ "%.2f"|format(breakdown.weight_charge) }}</dd></div>
       </dl>
       <div class="receipt-total">
-        <span>Total amount</span>
+        <span>{{ "Final amount" if order.actual_weight_kg else "Estimated amount" }}</span>
         <strong>₱{{ "%.2f"|format(order.total_price) }}</strong>
       </div>
+      {% if order.payment_reference %}<p class="receipt-meta">Payment reference: {{ order.payment_reference }} · Paid {{ order.paid_at|display_datetime }}</p>{% endif %}
 
       <div class="receipt-actions no-print">
         <button class="button button--primary" type="button" onclick="window.print()"><i class="fa-solid fa-print" aria-hidden="true"></i> Print receipt</button>

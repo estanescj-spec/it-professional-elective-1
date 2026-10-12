@@ -13,16 +13,30 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="form-field">
           <label class="form-label" for="full_name">Full name</label>
-          <input class="form-control" id="full_name" name="full_name" type="text" maxlength="80" autocomplete="name" required>
+          <input class="form-control" id="full_name" name="full_name" type="text" maxlength="80" autocomplete="name" value="{{ full_name|default('') }}" required>
         </div>
         <div class="form-field">
           <label class="form-label" for="email">Email address</label>
-          <input class="form-control" id="email" name="email" type="email" maxlength="254" autocomplete="email" required>
+          <input class="form-control" id="email" name="email" type="email" maxlength="254" autocomplete="email" value="{{ email|default('') }}" required>
         </div>
         <div class="form-field">
           <label class="form-label" for="password">Password</label>
-          <input class="form-control" id="password" name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+          <div class="password-field-wrap">
+            <input class="form-control" id="password" name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+            <button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false" aria-controls="password" data-password-toggle="password">
+              <i class="fa-regular fa-eye" aria-hidden="true"></i>
+            </button>
+          </div>
           <span class="form-help">Use 8–128 characters. Never reuse an important password.</span>
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="confirm_password">Confirm password</label>
+          <div class="password-field-wrap">
+            <input class="form-control" id="confirm_password" name="confirm_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+            <button class="password-toggle" type="button" aria-label="Show password" aria-pressed="false" aria-controls="confirm_password" data-password-toggle="confirm_password">
+              <i class="fa-regular fa-eye" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
         <button class="button button--primary" type="submit">Create account <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
       </form>

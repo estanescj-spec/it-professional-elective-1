@@ -2,8 +2,12 @@
 __pycache__/
 *.py[cod]
 *.db
+*.db-wal
+*.db-shm
 *.sqlite
 *.sqlite3
+*.sqlite-wal
+*.sqlite-shm
 .env
 .env.*
 !.env.example

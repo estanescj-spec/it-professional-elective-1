@@ -114,6 +114,16 @@ class JsonBackupTests(unittest.TestCase):
             with backups[0].open(encoding="utf-8") as backup:
                 self.assertEqual(json.load(backup), orders)
 
+    def test_retains_only_twenty_timestamped_backups(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "orders.json"
+            for order_id in range(25):
+                self.assertTrue(
+                    laundry_logic.save_json_backup([{"id": order_id}], path)
+                )
+            backups = list((Path(directory) / "backups").glob("orders_*.json"))
+            self.assertEqual(len(backups), laundry_logic.BACKUP_RETENTION_COUNT)
+
     def test_corrupt_and_invalid_utf8_files_return_empty_lists(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "orders.json"

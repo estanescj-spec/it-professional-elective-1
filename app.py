@@ -23,10 +23,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from db import (
     cancel_pending_order,
+    change_user_password,
+    clear_login_failures,
     create_order,
     create_user,
+    get_admin_users,
+    get_admin_order,
     get_admin_orders,
     get_db_connection,
+    get_login_lock_seconds,
     get_orders_for_user,
     get_order_for_user,
     get_user_by_email,
@@ -34,12 +39,17 @@ from db import (
     init_db,
     mark_order_paid,
     provision_admin,
+    record_login_failure,
     restore_orders_from_backup,
+    reset_customer_password,
+    update_actual_weight,
+    update_user_profile,
     update_order_status,
 )
 from laundry_logic import (
     MAX_PICKUP_DAYS,
     MAX_WEIGHT_KG,
+    MANILA_TZ,
     ORDER_STATUSES,
     PAYMENT_METHODS,
     PER_KG_RATE,
@@ -98,6 +108,8 @@ if not os.environ.get("FRESHNEST_SECRET_KEY"):
     )
 
 PHONE_PATTERN = re.compile(r"^\+?[0-9][0-9\s()-]{6,29}$")
+SHOP_ADDRESS = "Blk 12, Lot 8, Barangay San Isidro, Antipolo City, Rizal 1870"
+SHOP_PHONE = "0917 123 4567"
 ADMIN_STATUSES = ORDER_STATUSES
 PAGINATION_SIZE = 10
 
@@ -112,6 +124,7 @@ def csrf_token():
 
 @app.context_processor
 def inject_template_settings():
+    today = datetime.datetime.now(MANILA_TZ).date()
     return {
         "csrf_token": csrf_token,
         "service_rates": SERVICE_RATES,
@@ -122,8 +135,45 @@ def inject_template_settings():
         "max_pickup_days": MAX_PICKUP_DAYS,
         "weekday_pickup_slots": WEEKDAY_PICKUP_SLOTS,
         "sunday_pickup_slots": SUNDAY_PICKUP_SLOTS,
-        "today": datetime.date.today().isoformat(),
+        "today": today.isoformat(),
+        "current_time": datetime.datetime.now(MANILA_TZ).strftime("%H:%M"),
+        "operating_weekday_hours": pickup_hours(WEEKDAY_PICKUP_SLOTS),
+        "operating_sunday_hours": pickup_hours(SUNDAY_PICKUP_SLOTS),
+        "shop_address": SHOP_ADDRESS,
+        "shop_phone": SHOP_PHONE,
     }
+
+
+def pickup_hours(slots):
+    start = format_clock(slots[0])
+    end_hour = int(slots[-1][:2]) + 1
+    end = format_clock(f"{end_hour:02d}:00")
+    return f"{start} – {end}"
+
+
+def format_clock(value):
+    parsed = datetime.datetime.strptime(value, "%H:%M")
+    return f"{parsed.hour % 12 or 12}:{parsed.minute:02d} {'AM' if parsed.hour < 12 else 'PM'}"
+
+
+@app.template_filter("display_datetime")
+def display_datetime(value):
+    try:
+        parsed = datetime.datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return value
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=MANILA_TZ)
+    local = parsed.astimezone(MANILA_TZ)
+    return f"{local.strftime('%b')} {local.day}, {local.year}, {format_clock(local.strftime('%H:%M'))}"
+
+
+@app.template_filter("display_pickup_time")
+def display_pickup_time(value):
+    try:
+        return format_clock(value)
+    except (TypeError, ValueError):
+        return value
 
 
 @app.before_request
@@ -136,6 +186,9 @@ def enforce_csrf_and_load_user():
         ):
             abort(400, description="The form expired or its security token was invalid. Please try again.")
 
+    if request.endpoint == "static":
+        g.current_user = None
+        return
     user_id = session.get("user_id")
     g.current_user = get_user_by_id(user_id) if user_id else None
     if user_id and g.current_user is None:
@@ -165,14 +218,17 @@ def book_form_redirect():
     return redirect(url_for("customer_dashboard") + "#booking-form-title")
 
 
+def manila_timestamp():
+    return datetime.datetime.now(MANILA_TZ).isoformat(timespec="seconds")
+
+
 @app.route("/")
 def index():
+    today = datetime.datetime.now(MANILA_TZ).date()
     return render_template(
         "index.html",
-        pickup_min=datetime.date.today().isoformat(),
-        pickup_max=(
-            datetime.date.today() + datetime.timedelta(days=MAX_PICKUP_DAYS)
-        ).isoformat(),
+        pickup_min=today.isoformat(),
+        pickup_max=(today + datetime.timedelta(days=MAX_PICKUP_DAYS)).isoformat(),
     )
 
 
@@ -181,10 +237,17 @@ def login_page():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+        ip_address = request.remote_addr or "unknown"
+        lock_seconds = get_login_lock_seconds(email, ip_address)
+        if lock_seconds:
+            flash("Too many failed sign-in attempts. Please try again in 10 minutes.", "danger")
+            return render_template("login.html", email=email), 429
         user = get_user_by_email(email)
         if user is None or not check_password_hash(user["password_hash"], password):
+            record_login_failure(email, ip_address)
             flash("Email or password is incorrect.", "danger")
-            return render_template("login.html"), 401
+            return render_template("login.html", email=email), 401
+        clear_login_failures(email, ip_address)
         session.clear()
         session.permanent = True
         session["user_id"] = user["id"]
@@ -204,20 +267,23 @@ def register():
         password = request.form.get("password", "")
         if not full_name or len(full_name) > 80:
             flash("Enter your name (up to 80 characters).", "danger")
-            return render_template("register.html"), 400
+            return render_template("register.html", full_name=full_name, email=email), 400
         if len(email) > 254 or not EMAIL_PATTERN.fullmatch(email):
             flash("Enter a valid email address.", "danger")
-            return render_template("register.html"), 400
+            return render_template("register.html", full_name=full_name, email=email), 400
         if len(password) < 8 or len(password) > 128:
             flash("Password must be between 8 and 128 characters.", "danger")
-            return render_template("register.html"), 400
+            return render_template("register.html", full_name=full_name, email=email), 400
+        if password != request.form.get("confirm_password", ""):
+            flash("The passwords do not match.", "danger")
+            return render_template("register.html", full_name=full_name, email=email), 400
         try:
             user_id = create_user(
                 full_name, email, generate_password_hash(password), role="customer"
             )
         except sqlite3.IntegrityError:
             flash("An account with that email already exists.", "danger")
-            return render_template("register.html"), 409
+            return render_template("register.html", full_name=full_name, email=email), 409
         session.clear()
         session.permanent = True
         session["user_id"] = user_id
@@ -233,6 +299,60 @@ def logout():
     session.clear()
     flash("You have been signed out.", "info")
     return redirect(url_for("index"))
+
+
+@app.route("/account/profile", methods=["POST"])
+def update_profile():
+    if g.current_user is None or g.current_user["role"] not in {"customer", "admin"}:
+        flash("Please sign in to update your profile.", "warning")
+        return redirect(url_for("login_page"))
+    full_name = request.form.get("full_name", "").strip()
+    address = request.form.get("saved_address", "").strip()
+    contact_number = request.form.get("saved_contact_number", "").strip()
+    destination = url_for("profile")
+    if not full_name or len(full_name) > 80:
+        flash("Enter your name (up to 80 characters).", "danger")
+        return redirect(destination)
+    if address and len(address) > 300:
+        flash("Saved address cannot exceed 300 characters.", "danger")
+        return redirect(destination)
+    if contact_number and not PHONE_PATTERN.fullmatch(contact_number):
+        flash("Enter a valid contact number.", "danger")
+        return redirect(destination)
+    update_user_profile(g.current_user["id"], full_name, address, contact_number)
+    session["user_name"] = full_name
+    flash("Your profile was updated.", "success")
+    return redirect(url_for("profile"))
+
+
+@app.route("/account/password", methods=["POST"])
+def change_password():
+    if g.current_user is None:
+        flash("Please sign in to change your password.", "warning")
+        return redirect(url_for("login_page"))
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+    confirm_password = request.form.get("confirm_password", "")
+    user = get_user_by_id(g.current_user["id"])
+    if user is None or not check_password_hash(user["password_hash"], current_password):
+        flash("Your current password is incorrect.", "danger")
+        return redirect(url_for("profile"))
+    if len(new_password) < 8 or len(new_password) > 128:
+        flash("New password must be between 8 and 128 characters.", "danger")
+    elif new_password != confirm_password:
+        flash("The new passwords do not match.", "danger")
+    else:
+        change_user_password(user["id"], generate_password_hash(new_password))
+        flash("Your password has been changed.", "success")
+    return redirect(url_for("profile"))
+
+
+@app.route("/profile")
+def profile():
+    if g.current_user is None or g.current_user["role"] not in {"customer", "admin"}:
+        flash("Please sign in to view your profile.", "warning")
+        return redirect(url_for("login_page"))
+    return render_template("profile.html")
 
 
 @app.route("/customer", methods=["GET", "POST"])
@@ -252,6 +372,12 @@ def customer_dashboard():
         if not PHONE_PATTERN.fullmatch(contact_number):
             flash("Enter a valid contact number.", "danger")
             return book_form_redirect()
+        update_user_profile(
+            g.current_user["id"],
+            g.current_user["full_name"],
+            address,
+            contact_number,
+        )
         try:
             weight_kg = float(request.form.get("weight_kg", ""))
             breakdown = get_price_breakdown(service_type, weight_kg)
@@ -278,7 +404,7 @@ def customer_dashboard():
                     "pickup_time": pickup_time,
                     "address": address,
                     "contact_number": contact_number,
-                    "created_at": datetime.datetime.now().isoformat(timespec="seconds"),
+                    "created_at": datetime.datetime.now(MANILA_TZ).isoformat(timespec="seconds"),
                 }
             )
         except sqlite3.Error:
@@ -291,11 +417,12 @@ def customer_dashboard():
         return redirect(url_for("customer_dashboard"))
 
     orders = get_orders_for_user(g.current_user["id"])
+    today = datetime.datetime.now(MANILA_TZ).date()
     return render_template(
         "customer_dashboard.html",
         orders=orders,
-        pickup_min=datetime.date.today().isoformat(),
-        pickup_max=(datetime.date.today() + datetime.timedelta(days=MAX_PICKUP_DAYS)).isoformat(),
+        pickup_min=today.isoformat(),
+        pickup_max=(today + datetime.timedelta(days=MAX_PICKUP_DAYS)).isoformat(),
     )
 
 
@@ -310,13 +437,24 @@ def admin_dashboard():
         requested_page = max(1, int(request.args.get("page", "1")))
     except ValueError:
         requested_page = 1
+    sort = request.args.get("sort", "newest")
+    if sort not in {"newest", "pickup"}:
+        sort = "newest"
     orders, stats, total_matching = get_admin_orders(
-        status, search, requested_page, PAGINATION_SIZE
+        status, search, requested_page, PAGINATION_SIZE, sort=sort
     )
     total_pages = max(1, math.ceil(total_matching / PAGINATION_SIZE))
     page = min(requested_page, total_pages)
     if requested_page > total_pages:
-        return redirect(url_for("admin_dashboard", status=status, q=search, page=total_pages))
+        return redirect(
+            url_for(
+                "admin_dashboard",
+                status=status,
+                q=search,
+                sort=sort,
+                page=total_pages,
+            )
+        )
     return render_template(
         "admin_dashboard.html",
         orders=orders,
@@ -327,7 +465,22 @@ def admin_dashboard():
         total_pages=total_pages,
         statuses=ADMIN_STATUSES,
         status_transitions=STATUS_TRANSITIONS,
+        sort=sort,
+        users=get_admin_users(),
     )
+
+
+@app.route("/admin/reset_password/<int:user_id>", methods=["POST"])
+@role_required("admin")
+def admin_reset_password(user_id):
+    password = request.form.get("new_password", "")
+    if len(password) < 8 or len(password) > 128:
+        flash("Temporary password must be between 8 and 128 characters.", "danger")
+    elif not reset_customer_password(user_id, generate_password_hash(password)):
+        flash("Customer account not found.", "danger")
+    else:
+        flash("Customer password reset. Share the temporary password securely.", "success")
+    return redirect(url_for("admin_dashboard"))
 
 
 @app.route("/update_status/<int:order_id>", methods=["POST"])
@@ -337,7 +490,12 @@ def update_status(order_id):
     if new_status not in ADMIN_STATUSES:
         flash("Please select a valid order status.", "danger")
         return redirect(url_for("admin_dashboard"))
-    result = update_order_status(order_id, new_status)
+    result = update_order_status(
+        order_id,
+        new_status,
+        g.current_user["full_name"],
+        manila_timestamp(),
+    )
     messages = {
         "updated": ("Order status updated.", "success"),
         "unchanged": ("The order already has that status.", "info"),
@@ -354,8 +512,22 @@ def update_status(order_id):
 @app.route("/mark_paid/<int:order_id>", methods=["POST"])
 @role_required("admin")
 def mark_paid(order_id):
-    if not mark_order_paid(order_id):
-        flash("Order not found or already marked as paid.", "info")
+    with closing(get_db_connection()) as connection:
+        order = connection.execute(
+            "SELECT payment_method FROM orders WHERE id = ?", (order_id,)
+        ).fetchone()
+    if order is None:
+        flash("Order not found.", "danger")
+    elif len(request.form.get("payment_reference", "").strip()) > 100:
+        flash("Payment reference cannot exceed 100 characters.", "danger")
+    elif order["payment_method"] != "Cash on Delivery" and not request.form.get("payment_reference", "").strip():
+        flash("Enter the GCash/card transaction reference before confirming payment.", "danger")
+    elif not mark_order_paid(
+        order_id,
+        request.form.get("payment_reference", "").strip()[:100],
+        manila_timestamp(),
+    ):
+        flash("Record the actual laundry weight before marking this order paid.", "warning")
     elif not refresh_json_backup():
         flash("Payment updated, but the JSON backup could not be updated.", "warning")
     else:
@@ -366,7 +538,12 @@ def mark_paid(order_id):
 @app.route("/cancel_order/<int:order_id>", methods=["POST"])
 @role_required("customer")
 def cancel_order(order_id):
-    if not cancel_pending_order(order_id, g.current_user["id"]):
+    if not cancel_pending_order(
+        order_id,
+        g.current_user["id"],
+        manila_timestamp(),
+        g.current_user["full_name"],
+    ):
         flash("Only your pending orders can be cancelled.", "danger")
     elif not refresh_json_backup():
         flash("Order cancelled, but the JSON backup could not be updated.", "warning")
@@ -375,21 +552,41 @@ def cancel_order(order_id):
     return redirect(url_for("customer_dashboard"))
 
 
+@app.route("/update_weight/<int:order_id>", methods=["POST"])
+@role_required("admin")
+def update_weight(order_id):
+    try:
+        actual_weight = float(request.form.get("actual_weight_kg", ""))
+        order = get_admin_order(order_id)
+        if order is None:
+            flash("Order not found.", "danger")
+            return redirect(url_for("admin_dashboard"))
+        breakdown = get_price_breakdown(order["service_type"], actual_weight)
+    except ValueError as error:
+        flash(str(error), "danger")
+        return redirect(url_for("admin_dashboard"))
+    if not update_actual_weight(order_id, actual_weight, breakdown["total_price"]):
+        flash("Order not found or cancelled; actual weight was not updated.", "danger")
+    elif not refresh_json_backup():
+        flash("Actual weight saved, but the JSON backup could not be updated.", "warning")
+    else:
+        flash("Actual weight and final price saved.", "success")
+    return redirect(url_for("admin_dashboard"))
+
+
 @app.route("/receipt/<int:order_id>")
 def receipt(order_id):
     if g.current_user is None:
         return redirect(url_for("login_page"))
     if g.current_user["role"] == "admin":
-        with closing(get_db_connection()) as connection:
-            order = connection.execute(
-                "SELECT * FROM orders WHERE id = ?", (order_id,)
-            ).fetchone()
+        order = get_admin_order(order_id)
     else:
         order = get_order_for_user(order_id, g.current_user["id"])
     if order is None:
         abort(404)
     try:
-        breakdown = get_price_breakdown(order["service_type"], order["weight_kg"])
+        receipt_weight = order["actual_weight_kg"] or order["weight_kg"]
+        breakdown = get_price_breakdown(order["service_type"], receipt_weight)
     except ValueError:
         legacy_weight_charge = min(
             float(order["weight_kg"]) * PER_KG_RATE, float(order["total_price"])
@@ -399,7 +596,13 @@ def receipt(order_id):
             "weight_charge": legacy_weight_charge,
             "total_price": float(order["total_price"]),
         }
-    return render_template("receipt.html", order=order, breakdown=breakdown)
+    return render_template(
+        "receipt.html",
+        order=order,
+        breakdown=breakdown,
+        receipt_weight=order["actual_weight_kg"] or order["weight_kg"],
+        events=order["events"],
+    )
 
 
 @app.errorhandler(400)

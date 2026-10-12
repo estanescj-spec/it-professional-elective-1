@@ -18,55 +18,62 @@
       <section class="surface-card" aria-labelledby="booking-form-title">
         <h2 class="card-heading" id="booking-form-title">Book laundry service</h2>
         <p class="card-intro">Choose a service and a pickup date to create a booking.</p>
-        <form class="stacked-form" action="{{ url_for('customer_dashboard') }}" method="post">
+        <form class="stacked-form booking-groups" action="{{ url_for('customer_dashboard') }}" method="post">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <div class="form-field">
-            <label class="form-label" for="customer_name">Customer name</label>
-            <input class="form-control" id="customer_name" name="customer_name" value="{{ session.get('user_name') }}" readonly>
-          </div>
-          <div class="form-field">
-            <label class="form-label" for="service_type">Service type</label>
-            <select class="form-control" id="service_type" name="service_type" required>
-              {% for service, rate in service_rates.items() %}
-                <option value="{{ service }}" data-rate="{{ rate }}">{{ service }} — from ₱{{ "%.2f"|format(rate) }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-field">
-            <label class="form-label" for="weight_kg">Laundry weight (kg)</label>
-            <input class="form-control" id="weight_kg" name="weight_kg" type="number" min="0.1" max="{{ max_weight_kg }}" step="0.1" placeholder="For example, 3.5" required>
-          </div>
-          <div class="form-field">
-            <label class="form-label" for="pickup_date">Pickup date</label>
-            <input class="form-control" id="pickup_date" name="pickup_date" type="date" min="{{ pickup_min }}" max="{{ pickup_max }}" required>
-          </div>
-          <div class="form-field">
-            <label class="form-label" for="pickup_time">Pickup time</label>
-            <select class="form-control" id="pickup_time" name="pickup_time" data-weekday-slots='{{ weekday_pickup_slots|tojson }}' data-sunday-slots='{{ sunday_pickup_slots|tojson }}' required>
-              <option value="">Choose a date first</option>
-            </select>
-          </div>
-          <div class="form-field">
-            <label class="form-label" for="payment_method">Payment method</label>
-            <select class="form-control" id="payment_method" name="payment_method" required>
-              {% for method in payment_methods %}
-                <option value="{{ method }}">{{ method }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div class="form-field">
-            <label class="form-label" for="address">Pickup address</label>
-            <input class="form-control" id="address" name="address" type="text" maxlength="300" autocomplete="street-address" required>
-          </div>
-          <div class="form-field">
-            <label class="form-label" for="contact_number">Contact number</label>
-            <input class="form-control" id="contact_number" name="contact_number" type="tel" maxlength="30" autocomplete="tel" required>
-          </div>
-          <div class="form-field price-preview" data-price-preview data-rate-select="service_type" data-weight-input="weight_kg" data-per-kg-rate="{{ per_kg_rate }}">
-            <span>Service <strong data-price-base>₱0.00</strong></span>
-            <span>Weight charge <strong data-price-weight>₱0.00</strong></span>
-            <span>Estimated total <strong data-price-total>₱0.00</strong></span>
-            <small>₱{{ "%.2f"|format(per_kg_rate) }} per kg · maximum {{ max_weight_kg }} kg</small>
+          <fieldset class="booking-group">
+            <legend>Service</legend>
+            <div class="form-field">
+              <label class="form-label" for="service_type">Service type</label>
+              <select class="form-control" id="service_type" name="service_type" required>
+                {% for service, rate in service_rates.items() %}
+                  <option value="{{ service }}" data-rate="{{ rate }}">{{ service }} — from ₱{{ "%.2f"|format(rate) }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="weight_kg">Estimated laundry weight (kg)</label>
+              <input class="form-control" id="weight_kg" name="weight_kg" type="number" min="0.1" max="{{ max_weight_kg }}" step="0.1" placeholder="For example, 3.5" required>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="payment_method">Payment method</label>
+              <select class="form-control" id="payment_method" name="payment_method" required>
+                {% for method in payment_methods %}
+                  <option value="{{ method }}">{{ method }}</option>
+                {% endfor %}
+              </select>
+              <span class="form-help">Electronic payments are simulated; no card numbers are collected.</span>
+            </div>
+          </fieldset>
+          <fieldset class="booking-group">
+            <legend>Schedule</legend>
+            <div class="form-field">
+              <label class="form-label" for="pickup_date">Pickup date</label>
+              <input class="form-control" id="pickup_date" name="pickup_date" type="date" min="{{ pickup_min }}" max="{{ pickup_max }}" required>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="pickup_time">Pickup time</label>
+              <select class="form-control" id="pickup_time" name="pickup_time" data-today="{{ today }}" data-current-time="{{ current_time }}" data-weekday-slots='{{ weekday_pickup_slots|tojson }}' data-sunday-slots='{{ sunday_pickup_slots|tojson }}' required>
+                <option value="">Choose a date first</option>
+              </select>
+            </div>
+          </fieldset>
+          <fieldset class="booking-group">
+            <legend>Pickup details</legend>
+            <div class="form-field">
+              <label class="form-label" for="address">Pickup address</label>
+              <input class="form-control" id="address" name="address" type="text" maxlength="300" autocomplete="street-address" value="{{ g.current_user['saved_address'] }}" required>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="contact_number">Contact number</label>
+              <input class="form-control" id="contact_number" name="contact_number" type="tel" maxlength="30" autocomplete="tel" value="{{ g.current_user['saved_contact_number'] }}" required>
+            </div>
+          </fieldset>
+          <div class="form-field price-preview" data-price-preview data-rate-select="service_type" data-weight-input="weight_kg" data-per-kg-rate="{{ per_kg_rate }}" data-max-weight="{{ max_weight_kg }}">
+            <span data-price-message>Enter weight to see price. Maximum {{ max_weight_kg }} kg.</span>
+            <span>Service <strong data-price-base>—</strong></span>
+            <span>Weight charge <strong data-price-weight>—</strong></span>
+            <span>Estimated total <strong data-price-total>—</strong></span>
+            <small>Final price is confirmed after pickup and actual weighing.</small>
           </div>
           <button class="button button--primary" type="submit">Place booking <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
         </form>
@@ -75,7 +82,7 @@
       <section class="surface-card" aria-labelledby="order-history-title">
         <h2 class="card-heading" id="order-history-title">Order history &amp; tracking</h2>
         <p class="card-intro">Check your current order status and open a printable receipt.</p>
-        <div class="table-wrap">
+        <div class="table-wrap customer-orders-table">
           <table class="data-table">
             <thead>
               <tr>
@@ -94,18 +101,22 @@
                 <tr>
                   <td><strong>#{{ order.id }}</strong></td>
                   <td>{{ order.service_type }}<br><span class="form-help">{{ order.weight_kg }} kg<br>{{ order.address }}<br>{{ order.contact_number }}</span></td>
-                  <td>{{ order.pickup_date }}<br>{{ order.pickup_time }}</td>
-                  <td>₱{{ "%.2f"|format(order.total_price) }}</td>
+                  <td>{{ order.pickup_date }}<br>{{ order.pickup_time|display_pickup_time }}</td>
+                  <td>{% if order.actual_weight_kg %}₱{{ "%.2f"|format(order.total_price) }}{% else %}<span class="form-help">Estimate<br></span>₱{{ "%.2f"|format(order.total_price) }}{% endif %}</td>
                   <td>{{ order.payment_method }}<br><span class="payment-badge">{{ order.payment_status }}</span></td>
                   <td><span class="status-badge status-badge--{{ status_class }}">{{ order.status }}</span></td>
                   <td>
                     <div class="table-actions">
                       <a class="button button--secondary button--small" href="{{ url_for('receipt', order_id=order.id) }}">Receipt</a>
                       {% if order.status == 'Pending' %}
-                        <form class="inline-form" action="{{ url_for('cancel_order', order_id=order.id) }}" method="post" onsubmit="return confirm('Cancel this pending order?');">
-                          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                          <button class="button button--danger button--small" type="submit">Cancel</button>
-                        </form>
+                        <button class="button button--danger button--small" type="button" data-open-dialog="cancel-{{ order.id }}">Cancel</button>
+                        <dialog class="confirm-dialog" id="cancel-{{ order.id }}">
+                          <form action="{{ url_for('cancel_order', order_id=order.id) }}" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <h3>Cancel order #{{ order.id }}?</h3><p>This pending pickup will be cancelled.</p>
+                            <div class="dialog-actions"><button class="button button--secondary" type="button" data-close-dialog>Keep order</button><button class="button button--danger" type="submit">Cancel order</button></div>
+                          </form>
+                        </dialog>
                       {% endif %}
                     </div>
                   </td>
@@ -117,6 +128,44 @@
               {% endfor %}
             </tbody>
           </table>
+        </div>
+        <div class="customer-order-cards">
+          {% for order in orders %}
+            <article class="order-card">
+              <header class="order-card-heading"><strong>Order #{{ order.id }}</strong><span class="status-badge status-badge--{{ order.status|lower|replace(' ', '-') }}">{{ order.status }}</span></header>
+              <p><strong>{{ order.service_type }}</strong> · {{ order.actual_weight_kg or order.weight_kg }} kg<br>{{ order.pickup_date }} · {{ order.pickup_time|display_pickup_time }}</p>
+              <p>{{ order.payment_method }} · {{ order.payment_status }}<br>{% if not order.actual_weight_kg %}Estimated total: {% else %}Final total: {% endif %}₱{{ "%.2f"|format(order.total_price) }}</p>
+              <div class="progress-stepper" aria-label="Order status: {{ order.status }}">
+                {% if order.status == 'Cancelled' %}
+                  <span class="progress-cancelled"><i class="fa-solid fa-ban" aria-hidden="true"></i> Order cancelled</span>
+                {% else %}
+                  {% for step in ('Pending', 'Picked Up', 'Washing', 'Out for Delivery', 'Completed') %}
+                    {% set current_index = ('Pending', 'Picked Up', 'Washing', 'Out for Delivery', 'Completed').index(order.status) %}
+                    {% set step_index = loop.index0 %}
+                    <span class="progress-step {% if step_index < current_index %}progress-step--done{% elif step_index == current_index %}progress-step--current{% endif %}">{{ step }}</span>
+                  {% endfor %}
+                {% endif %}
+              </div>
+              <details class="order-details"><summary>Pickup and status history</summary><p>{{ order.address or "No address" }}<br>{{ order.contact_number or "No phone" }}</p>
+                <ol class="event-timeline">{% for event in order.events %}<li><strong>{{ event.status }}</strong> · {{ event.changed_at|display_datetime }} <span>by {{ event.changed_by }}</span></li>{% endfor %}</ol>
+              </details>
+              <div class="table-actions">
+                <a class="button button--secondary button--small" href="{{ url_for('receipt', order_id=order.id) }}">Receipt</a>
+                {% if order.status == 'Pending' %}
+                  <button class="button button--danger button--small" type="button" data-open-dialog="cancel-card-{{ order.id }}">Cancel</button>
+                  <dialog class="confirm-dialog" id="cancel-card-{{ order.id }}">
+                    <form action="{{ url_for('cancel_order', order_id=order.id) }}" method="post">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <h3>Cancel order #{{ order.id }}?</h3><p>This pending pickup will be cancelled.</p>
+                      <div class="dialog-actions"><button class="button button--secondary" type="button" data-close-dialog>Keep order</button><button class="button button--danger" type="submit">Cancel order</button></div>
+                    </form>
+                  </dialog>
+                {% endif %}
+              </div>
+            </article>
+          {% else %}
+            <p class="empty-state">No bookings yet. Your orders will appear here.</p>
+          {% endfor %}
         </div>
       </section>
     </div>
