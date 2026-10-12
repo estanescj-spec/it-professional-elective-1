@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FreshNest Laundry - Laundry Done, Stress Gone</title>
+    <!-- Google Fonts for precision typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400;1,600&display=swap"
+      rel="stylesheet"
+    />
+    <!-- FontAwesome icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+
+    <!-- Inline CSS for static rendering matching reference screenshot -->
+    <style>
+      /* Base Reset & Variables */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg-main: #f5f7fb;
+        --bg-card: #ffffff;
+        --bg-hero-tint: #edf3fa;
+        --primary-blue: #3275a6;
+        --primary-hover: #265d85;
+        --text-dark: #1e293b;
+        --text-muted: #64748b;
+        --text-light: #8fa0b5;
+        --border-color: #dbe4ee;
+        --font-sans: "Inter", sans-serif;
+        --font-serif: "Playfair Display", Georgia, serif;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background-color: var(--bg-main);
+        color: var(--text-dark);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        text-decoration: none;
+        color: inherit;
+      }
+
+      /* Container Limit */
+      .container {
+        max-width: 1140px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* ---------------- HEADER ---------------- */
+      header {
+        background-color: #ffffff;
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 100;
+      }
+
+      .header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 80px;
+      }
+
+      /* Logo Branding */
+      .logo {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .logo-title {
+        font-family: var(--font-serif);
+        font-size: 26px;
+        font-weight: 700;
+        color: var(--primary-blue);
+        line-height: 1;
+        letter-spacing: -0.5px;
+      }
+
+      .logo-sub {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 3px;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+
+      /* Navigation Links */
+      nav ul {
+        display: flex;
+        list-style: none;
+        gap: 32px;
+      }
+
+      nav a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-dark);
+        position: relative;
+        padding: 6px 0;
+      }
+
+      nav a.active {
+        font-weight: 600;
+      }
+
+      nav a.active::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background-color: var(--primary-blue);
+      }
+
+      /* My Account Button */
+      .btn-account {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border: 1px solid #b8c8da;
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-dark);
+        background: transparent;
+      }
+
+      /* ---------------- HERO SECTION ---------------- */
+      .hero {
+        background-color: var(--bg-hero-tint);
+        padding: 50px 0 60px;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        align-items: center;
+      }
+
+      .hero-left {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .hero-headline {
+        font-family: var(--font-serif);
+        font-size: 52px;
+        font-weight: 700;
+        line-height: 1.1;
+        color: #172554;
+        margin-bottom: 20px;
+      }
+
+      .hero-headline span.italic-stress {
+        font-style: italic;
+        font-weight: 400;
+        color: var(--primary-blue);
+      }
+
+      .hero-subtitle {
+        font-size: 15px;
+        color: var(--text-muted);
+        max-width: 420px;
+        margin-bottom: 30px;
+        line-height: 1.6;
+      }
+
+      .hero-cta {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 40px;
+      }
+
+      .btn-primary {
+        background-color: var(--primary-blue);
+        color: #ffffff;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        color: var(--primary-blue);
+        border: 1px solid #a3bedc;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      /* Features row below CTA */
+      .hero-features {
+        display: flex;
+        gap: 24px;
+        align-items: center;
+      }
+
+      .feature-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .feature-icon-box {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background-color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-blue);
+        font-size: 16px;
+      }
+
+      .feature-text {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-dark);
+      }
+
+      /* Hero Right Side Card / Stack Visual */
+      .hero-right-banner {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--border-color);
+        background-color: #ffffff;
+      }
+
+      .hero-bg-img {
+        width: 100%;
+        height: 380px;
+        object-fit: cover;
+        display: block;
+      }
+
+      /* Wall Banner Simulation overlay inside photo */
+      .hero-overlay-poster {
+        position: absolute;
+        top: 24px;
+        right: 28px;
+        background-color: #3b82f6;
+        color: #ffffff;
+        padding: 24px 20px;
+        border-radius: 6px;
+        text-align: center;
+        width: 130px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
+      .poster-title {
+        font-family: var(--font-serif);
+        font-size: 18px;
+        line-height: 1.25;
+        margin-bottom: 8px;
+      }
+
+      /* Stacked folded towels element */
+      .towel-stack-box {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        width: 220px;
+        background-color: rgba(255, 255, 255, 0.95);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      /* ---------------- HOW IT WORKS ---------------- */
+      .how-it-works {
+        background-color: #eef4fb;
+        padding: 48px 0;
+        border-bottom: 1px solid var(--border-color);
+      }
+
+      .how-grid {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 20px;
+        align-items: center;
+      }
+
+      .how-title {
+        font-family: var(--font-serif);
+        font-size: 28px;
+        font-weight: 700;
+        line-height: 1.2;
+        color: var(--text-dark);
+      }
+
+      .steps-container {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+      }
+
+      .step-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        position: relative;
+        padding-right: 15px;
+      }
+
+      .step-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .step-icon-box {
+        width: 42px;
+        height: 42px;
+        background: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-dark);
+        font-size: 18px;
+      }
+
+      .step-number {
+        width: 22px;
+        height: 22px;
+        background-color: var(--primary-blue);
+        color: #ffffff;
+        border-radius: 50%;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: absolute;
+        top: -4px;
+        left: 32px;
+      }
+
+      .step-arrow {
+        color: var(--text-light);
+        font-size: 16px;
+        align-self: center;
+        margin-top: -24px;
+        padding: 0 8px;
+      }
+
+      .step-name {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 4px;
+      }
+
+      .step-desc {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.4;
+      }
+
+      /* ---------------- OUR SERVICES ---------------- */
+      .services {
+        padding: 56px 0 64px;
+        background-color: var(--bg-main);
+      }
+
+      .services-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+      }
+
+      .services-title {
+        font-family: var(--font-serif);
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-dark);
+      }
+
+      .view-all-link {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--primary-blue);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .services-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 20px;
+      }
+
+      .service-card {
+        background-color: #ffffff;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 28px 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        height: 240px;
+      }
+
+      .service-icon {
+        font-size: 32px;
+        color: var(--primary-blue);
+        margin-bottom: 16px;
+      }
+
+      .service-name {
+        font-family: var(--font-serif);
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 6px;
+      }
+
+      .service-desc {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.4;
+      }
+
+      .service-price {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin-top: 16px;
+      }
+
+      .price-amount {
+        font-family: var(--font-serif);
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--primary-blue);
+      }
+
+      /* ---------------- FOOTER ---------------- */
+      footer {
+        background-color: #edf2f7;
+        border-top: 1px solid var(--border-color);
+        padding-top: 48px;
+      }
+
+      .footer-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 32px;
+        padding-bottom: 48px;
+      }
+
+      .footer-col-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-dark);
+        margin-bottom: 16px;
+      }
+
+      .footer-col-title i {
+        color: var(--primary-blue);
+        font-size: 15px;
+      }
+
+      .footer-text {
+        font-size: 12px;
+        color: var(--text-muted);
+        line-height: 1.6;
+      }
+
+      .footer-text strong {
+        color: var(--text-dark);
+        font-weight: 600;
+      }
+
+      .social-icons {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .social-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: var(--primary-blue);
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+      }
+
+      .social-handle {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      /* Bottom Tagline Ribbon */
+      .bottom-banner {
+        background-color: var(--primary-blue);
+        color: #ffffff;
+        text-align: center;
+        padding: 12px 0;
+        font-family: var(--font-serif);
+        font-size: 14px;
+        letter-spacing: 0.3px;
+      }
+
+      /* Responsive Breakpoints */
+      @media (max-width: 992px) {
+        .hero-grid {
+          grid-template-columns: 1fr;
+        }
+        .how-grid {
+          grid-template-columns: 1fr;
+        }
+        .services-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .footer-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 600px) {
+        nav {
+          display: none;
+        }
+        .services-grid {
+          grid-template-columns: 1fr;
+        }
+        .steps-container {
+          flex-direction: column;
+          gap: 20px;
+        }
+        .step-arrow {
+          display: none;
+        }
+        .footer-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Header -->
+    <header>
+      <div class="container">
+        <div class="header-content">
+          <!-- Brand Logo -->
+          <div class="logo">
+            <span class="logo-title">FreshNest</span>
+            <span class="logo-sub">LAUNDRY</span>
+          </div>
+
+          <!-- Navigation Links -->
+          <nav>
+            <ul>
+              <li><a href="#home" class="active">Home</a></li>
+              <li><a href="#services">Services</a></li>
+              <li><a href="#rates">Rates</a></li>
+              <li><a href="#how-it-works">How It Works</a></li>
+              <li><a href="#about">About Us</a></li>
+              <li><a href="#contact">Contact</a></li>
+            </ul>
+          </nav>
+
+          <!-- My Account Pill -->
+          <a href="#account" class="btn-account">
+            <i class="fa-regular fa-user"></i>
+            <span>My Account</span>
+          </a>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero" id="home">
+      <div class="container">
+        <div class="hero-grid">
+          <!-- Hero Left Column -->
+          <div class="hero-left">
+            <h1 class="hero-headline">
+              Laundry done,<br />
+              <span class="italic-stress">stress</span> gone.
+            </h1>
+
+            <p class="hero-subtitle">
+              Wash, dry, fold, and pickup services for busy students, workers,
+              and families.
+            </p>
+
+            <!-- CTAs -->
+            <div class="hero-cta">
+              <a href="#book" class="btn-primary">
+                <span>Book Pickup</span>
+                <i class="fa-solid fa-arrow-right"></i>
+              </a>
+              <a href="#rates" class="btn-secondary"> View Rates </a>
+            </div>
+
+            <!-- Feature Icons -->
+            <div class="hero-features">
+              <div class="feature-item">
+                <div class="feature-icon-box">
+                  <i class="fa-solid fa-jug-detergent"></i>
+                </div>
+                <span class="feature-text">Clean machines</span>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon-box">
+                  <i class="fa-regular fa-clock"></i>
+                </div>
+                <span class="feature-text">Same-day option</span>
+              </div>
+              <div class="feature-item">
+                <div class="feature-icon-box">
+                  <i class="fa-solid fa-truck-fast"></i>
+                </div>
+                <span class="feature-text">Pickup available</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hero Right Photo Counter Display -->
+          <div class="hero-right-banner">
+            <img
+              src="https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&q=80&w=1000"
+              alt="Fresh Clean Laundry Store"
+              class="hero-bg-img"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="how-it-works" id="how-it-works">
+      <div class="container">
+        <div class="how-grid">
+          <div class="how-title">How it<br />works</div>
+
+          <div class="steps-container">
+            <!-- Step 1 -->
+            <div class="step-item">
+              <div class="step-header">
+                <div class="step-icon-box">
+                  <i class="fa-solid fa-mobile-screen"></i>
+                </div>
+                <div class="step-number">1</div>
+              </div>
+              <div class="step-name">Book</div>
+              <div class="step-desc">Schedule pickup in minutes.</div>
+            </div>
+
+            <div class="step-arrow">
+              <i class="fa-solid fa-chevron-right"></i>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step-item">
+              <div class="step-header">
+                <div class="step-icon-box">
+                  <i class="fa-solid fa-bag-shopping"></i>
+                </div>
+                <div class="step-number">2</div>
+              </div>
+              <div class="step-name">Pickup</div>
+              <div class="step-desc">We pick up your laundry.</div>
+            </div>
+
+            <div class="step-arrow">
+              <i class="fa-solid fa-chevron-right"></i>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step-item">
+              <div class="step-header">
+                <div class="step-icon-box">
+                  <i class="fa-solid fa-soap"></i>
+                </div>
+                <div class="step-number">3</div>
+              </div>
+              <div class="step-name">Wash</div>
+              <div class="step-desc">We clean with care and quality.</div>
+            </div>
+
+            <div class="step-arrow">
+              <i class="fa-solid fa-chevron-right"></i>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step-item">
+              <div class="step-header">
+                <div class="step-icon-box">
+                  <i class="fa-solid fa-shirt"></i>
+                </div>
+                <div class="step-number">4</div>
+              </div>
+              <div class="step-name">Deliver</div>
+              <div class="step-desc">Fresh, folded, right to you.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Our Services Section -->
+    <section class="services" id="services">
+      <div class="container">
+        <div class="services-header">
+          <h2 class="services-title">Our Services</h2>
+          <a href="#rates" class="view-all-link">
+            <span>View full rates</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </a>
+        </div>
+
+        <div class="services-grid">
+          <!-- Service 1 -->
+          <div class="service-card">
+            <div>
+              <div class="service-icon">
+                <i class="fa-solid fa-layer-group"></i>
+              </div>
+              <div class="service-name">Wash & Fold</div>
+              <div class="service-desc">Clean, folded, and ready to wear.</div>
+            </div>
+            <div class="service-price">
+              from <span class="price-amount">₱180</span>
+            </div>
+          </div>
+
+          <!-- Service 2 -->
+          <div class="service-card">
+            <div>
+              <div class="service-icon">
+                <i class="fa-solid fa-mattress-pillow"></i>
+              </div>
+              <div class="service-name">Comforter Wash</div>
+              <div class="service-desc">
+                Deep clean for comforters & blankets.
+              </div>
+            </div>
+            <div class="service-price">
+              from <span class="price-amount">₱250</span>
+            </div>
+          </div>
+
+          <!-- Service 3 -->
+          <div class="service-card">
+            <div>
+              <div class="service-icon">
+                <i class="fa-solid fa-truck"></i>
+              </div>
+              <div class="service-name">Pickup & Delivery</div>
+              <div class="service-desc">Convenient door-to-door service.</div>
+            </div>
+            <div class="service-price">
+              from <span class="price-amount">₱50</span>
+            </div>
+          </div>
+
+          <!-- Service 4 -->
+          <div class="service-card">
+            <div>
+              <div class="service-icon">
+                <i class="fa-regular fa-clock"></i>
+              </div>
+              <div class="service-name">Rush Service</div>
+              <div class="service-desc">Need it fast? We've got you.</div>
+            </div>
+            <div class="service-price">
+              from <span class="price-amount">₱80</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer Section -->
+    <footer>
+      <div class="container">
+        <div class="footer-grid">
+          <!-- Operating Hours -->
+          <div>
+            <div class="footer-col-title">
+              <i class="fa-regular fa-clock"></i>
+              <span>Operating Hours</span>
+            </div>
+            <div class="footer-text">
+              Mon – Sat<br />
+              <strong>7:00 AM – 8:00 PM</strong><br /><br />
+              Sunday<br />
+              <strong>8:00 AM – 6:00 PM</strong>
+            </div>
+          </div>
+
+          <!-- Location -->
+          <div>
+            <div class="footer-col-title">
+              <i class="fa-solid fa-location-dot"></i>
+              <span>Location</span>
+            </div>
+            <div class="footer-text">
+              Blk 12, Lot 8, Barangay San Isidro<br />
+              Antipolo City, Rizal 1870<br /><br />
+              <span style="color: var(--text-light)"
+                >Near San Isidro Elementary School</span
+              >
+            </div>
+          </div>
+
+          <!-- Contact Us -->
+          <div>
+            <div class="footer-col-title">
+              <i class="fa-solid fa-phone"></i>
+              <span>Contact Us</span>
+            </div>
+            <div class="footer-text">
+              0917 123 4567<br />
+              0920 987 6543<br /><br />
+              <i class="fa-regular fa-envelope" style="margin-right: 4px"></i>
+              hello@freshnest.ph
+            </div>
+          </div>
+
+          <!-- Follow Us -->
+          <div>
+            <div class="footer-col-title" style="margin-bottom: 12px">
+              <span>Follow Us</span>
+            </div>
+            <div class="social-icons">
+              <a href="#" class="social-btn"
+                ><i class="fa-brands fa-facebook-f"></i
+              ></a>
+              <a href="#" class="social-btn"
+                ><i class="fa-brands fa-instagram"></i
+              ></a>
+              <a href="#" class="social-btn"
+                ><i class="fa-brands fa-tiktok"></i
+              ></a>
+            </div>
+            <div class="social-handle">@freshnest.laundry</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tagline Banner Bar -->
+      <div class="bottom-banner">Fresh laundry. Happy life. ♡</div>
+    </footer>
+  </body>
+</html>
