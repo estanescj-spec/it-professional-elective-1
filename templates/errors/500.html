@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Something went wrong | FreshNest Laundry{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <div class="container">
+    <div class="auth-card error-card">
+      <span class="auth-icon"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i></span>
+      <h1 class="section-title">We hit a snag</h1>
+      <p class="section-copy">Your request couldn't be completed. Please try again in a moment.</p>
+      <a class="button button--primary" href="{{ url_for('index') }}">Return to FreshNest</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

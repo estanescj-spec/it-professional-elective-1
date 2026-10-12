@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Manage orders | FreshNest Laundry{% endblock %}
+
+{% block content %}
+<section class="page-shell">
+  <div class="container">
+    <div class="page-heading">
+      <div>
+        <span class="eyebrow">FreshNest operations</span>
+        <h1 class="page-title">Order management</h1>
+        <p class="page-subtitle">Review bookings, update the laundry pipeline, and track payments.</p>
+      </div>
+      <span class="account-pill"><i class="fa-solid fa-list-check" aria-hidden="true"></i> {{ stats.total_orders or 0 }} total orders</span>
+    </div>
+
+    <div class="summary-grid">
+      <article class="summary-card"><span>Total orders</span><strong>{{ stats.total_orders or 0 }}</strong></article>
+      <article class="summary-card"><span>Pending</span><strong>{{ stats.pending_count or 0 }}</strong></article>
+      <article class="summary-card"><span>Revenue (excludes cancelled)</span><strong>₱{{ "%.2f"|format(stats.revenue or 0) }}</strong></article>
+    </div>
+
+    <section class="surface-card" aria-labelledby="all-orders-title">
+      <h2 class="card-heading" id="all-orders-title">All customer orders</h2>
+      <p class="card-intro">Filter and search orders, progress their status, or mark payments as paid.</p>
+      <form class="filter-bar" action="{{ url_for('admin_dashboard') }}" method="get">
+        <div class="form-field">
+          <label class="form-label" for="status-filter">Filter by status</label>
+          <select class="form-control" id="status-filter" name="status">
+            <option value="All" {% if status_filter == 'All' %}selected{% endif %}>All statuses</option>
+            {% for status in statuses %}
+              <option value="{{ status }}" {% if status_filter == status %}selected{% endif %}>{{ status }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field filter-search">
+          <label class="form-label" for="order-search">Customer or order number</label>
+          <input class="form-control" id="order-search" name="q" type="search" value="{{ search }}" maxlength="80" placeholder="Name or #123">
+        </div>
+        <button class="button button--primary" type="submit"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i> Search</button>
+        <a class="button button--secondary" href="{{ url_for('admin_dashboard') }}">Clear</a>
+      </form>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">Order</th>
+              <th scope="col">Customer</th>
+              <th scope="col">Address / Contact</th>
+              <th scope="col">Service</th>
+              <th scope="col">Weight</th>
+              <th scope="col">Total</th>
+              <th scope="col">Payment</th>
+              <th scope="col">Pickup</th>
+              <th scope="col">Status</th>
+              <th scope="col">Update status</th>
+              <th scope="col">Payment action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for order in orders %}
+              {% set status_class = order.status|lower|replace(' ', '-') %}
+              <tr>
+                <td><strong>#{{ order.id }}</strong></td>
+                <td>{{ order.customer_name }}</td>
+                <td>{{ order.address }}<br><span class="form-help">{{ order.contact_number }}</span></td>
+                <td>{{ order.service_type }}</td>
+                <td>{{ order.weight_kg }} kg</td>
+                <td>₱{{ "%.2f"|format(order.total_price) }}</td>
+                <td>{{ order.payment_method }}<br><span class="payment-badge">{{ order.payment_status }}</span></td>
+                <td>{{ order.pickup_date }}<br>{{ order.pickup_time }}</td>
+                <td><span class="status-badge status-badge--{{ status_class }}">{{ order.status }}</span></td>
+                <td>
+                  {% if status_transitions[order.status] %}
+                    <form class="inline-form" action="{{ url_for('update_status', order_id=order.id) }}" method="post">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <label class="visually-hidden" for="status-{{ order.id }}">Update order {{ order.id }} status</label>
+                      <select class="compact-select" id="status-{{ order.id }}" name="status" required>
+                        {% for status in status_transitions[order.status] %}
+                          <option value="{{ status }}">{{ status }}</option>
+                        {% endfor %}
+                      </select>
+                      <button class="button button--primary button--small" type="submit">Save</button>
+                    </form>
+                  {% else %}
+                    <span class="form-help">No further changes</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if order.payment_status == 'Unpaid' and order.status != 'Cancelled' %}
+                    <form class="inline-form" action="{{ url_for('mark_paid', order_id=order.id) }}" method="post">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="button button--secondary button--small" type="submit">Mark paid</button>
+                    </form>
+                  {% elif order.status == 'Cancelled' and order.payment_status == 'Unpaid' %}
+                    <span class="form-help">Cancelled</span>
+                  {% else %}
+                    <span class="payment-badge">Paid</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td class="empty-state" colspan="11"><i class="fa-regular fa-rectangle-list" aria-hidden="true"></i>No orders match these filters.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="pagination" aria-label="Order pages">
+        <span>Page {{ page }} of {{ total_pages }} · {{ total_matching }} matching orders</span>
+        <div class="pagination-actions">
+          {% if page > 1 %}
+            <a class="button button--secondary button--small" href="{{ url_for('admin_dashboard', status=status_filter, q=search, page=page - 1) }}">Previous</a>
+          {% endif %}
+          {% if page < total_pages %}
+            <a class="button button--secondary button--small" href="{{ url_for('admin_dashboard', status=status_filter, q=search, page=page + 1) }}">Next</a>
+          {% endif %}
+        </div>
+      </nav>
+    </section>
+  </div>
+</section>
+{% endblock %}
