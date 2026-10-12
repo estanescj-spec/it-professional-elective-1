@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}FreshNest Laundry | Laundry done, stress gone{% endblock %}
+
+{% block content %}
+<section class="hero" id="home">
+  <div class="container hero-grid">
+    <div>
+      <span class="eyebrow"><i class="fa-solid fa-sparkles" aria-hidden="true"></i> Your laundry day, made easy</span>
+      <h1 class="hero-title">Laundry done,<br><em>stress</em> gone.</h1>
+      <p class="hero-copy">Fresh, clean clothes without losing your day. Book a pickup, choose the service that fits, and let FreshNest take care of the rest.</p>
+      <div class="hero-actions">
+        {% if session.get('role') == 'customer' %}
+          <a class="button button--primary" href="#book-section">Book a pickup <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        {% elif session.get('role') == 'admin' %}
+          <a class="button button--primary" href="{{ url_for('admin_dashboard') }}">Manage orders <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        {% else %}
+          <a class="button button--primary" href="{{ url_for('login_page') }}">Get started <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></a>
+        {% endif %}
+        <a class="button button--secondary" href="#services">Explore our rates</a>
+      </div>
+      <div class="hero-features" aria-label="Service highlights">
+        <span class="feature-chip"><i class="fa-solid fa-soap" aria-hidden="true"></i> Careful cleaning</span>
+        <span class="feature-chip"><i class="fa-regular fa-clock" aria-hidden="true"></i> Rush service</span>
+        <span class="feature-chip"><i class="fa-solid fa-truck-fast" aria-hidden="true"></i> Pickup available</span>
+      </div>
+    </div>
+    <div class="hero-visual">
+      <img src="{{ url_for('static', filename='img/laundry-hero.jpg') }}" alt="Freshly washed and folded laundry">
+      <div class="hero-visual-caption">
+        <i class="fa-solid fa-shirt" aria-hidden="true"></i>
+        <div><strong>A little more time for you</strong><span>We'll handle laundry day with care.</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section section--white" id="how-it-works">
+  <div class="container">
+    <div class="section-heading">
+      <span class="eyebrow">Simple from start to finish</span>
+      <h2 class="section-title">How it works</h2>
+      <p class="section-copy">Four easy steps between your laundry basket and fresh, folded clothes.</p>
+    </div>
+    <div class="steps-grid">
+      <article class="step-card">
+        <span class="step-number">01</span>
+        <h3>Book</h3>
+        <p>Choose a service and a pickup date that works for you.</p>
+      </article>
+      <article class="step-card">
+        <span class="step-number">02</span>
+        <h3>Pickup</h3>
+        <p>We collect your laundry at your scheduled time.</p>
+      </article>
+      <article class="step-card">
+        <span class="step-number">03</span>
+        <h3>Wash with care</h3>
+        <p>Your items are cleaned and handled with attention.</p>
+      </article>
+      <article class="step-card">
+        <span class="step-number">04</span>
+        <h3>Fresh delivery</h3>
+        <p>Get your laundry back clean, folded, and ready to wear.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="services">
+  <div class="container">
+    <div class="section-heading">
+      <span class="eyebrow">Good care. Clear rates.</span>
+      <h2 class="section-title">Our services &amp; rates</h2>
+      <p class="section-copy">Pick the service you need. Each booking includes a ₱{{ "%.2f"|format(per_kg_rate) }} per kg handling charge.</p>
+    </div>
+    <div class="services-grid">
+      {% for service, rate in service_rates.items() %}
+        <article class="service-card">
+          <span class="service-icon"><i class="fa-solid {% if service == 'Comforter Wash' %}fa-bed{% elif service == 'Pickup & Delivery' %}fa-truck{% elif service == 'Rush Service' %}fa-clock{% else %}fa-layer-group{% endif %}" aria-hidden="true"></i></span>
+          <h3>{{ service }}</h3>
+          <p>{{ service_descriptions[service] }}</p>
+          <div class="service-price">Starting at<strong>₱{{ "%.2f"|format(rate) }}</strong></div>
+        </article>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<section class="booking-section" id="book-section">
+  <div class="container">
+    <div class="section-heading">
+      <span class="eyebrow">Ready when you are</span>
+      <h2 class="section-title">Book a pickup</h2>
+      <p class="section-copy">Tell us what you need and choose your preferred pickup date.</p>
+    </div>
+    <div class="booking-card">
+      {% if session.get('role') == 'customer' %}
+        <form action="{{ url_for('customer_dashboard') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-grid">
+            <div class="form-section-heading">Service &amp; payment</div>
+            <div class="form-field">
+              <label class="form-label" for="landing_customer_name">Customer name</label>
+              <input class="form-control" id="landing_customer_name" name="customer_name" type="text" value="{{ session.get('user_name') }}" readonly>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="landing_service_type">Service type</label>
+              <select class="form-control" id="landing_service_type" name="service_type" required>
+                {% for service, rate in service_rates.items() %}
+                  <option value="{{ service }}" data-rate="{{ rate }}">{{ service }} — from ₱{{ "%.2f"|format(rate) }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="landing_weight">Laundry weight (kg)</label>
+              <input class="form-control" id="landing_weight" name="weight_kg" type="number" min="0.1" max="{{ max_weight_kg }}" step="0.1" placeholder="For example, 3.5" required>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="landing_payment">Payment method</label>
+              <select class="form-control" id="landing_payment" name="payment_method" required>
+                {% for method in payment_methods %}
+                  <option value="{{ method }}">{{ method }}</option>
+                {% endfor %}
+              </select>
+              <span class="form-help">Simulated payment only. Never enter card numbers.</span>
+            </div>
+            <div class="form-section-heading">Schedule</div>
+            <div class="form-field">
+              <label class="form-label" for="landing_pickup_date">Pickup date</label>
+              <input class="form-control" id="landing_pickup_date" name="pickup_date" type="date" min="{{ pickup_min }}" max="{{ pickup_max }}" required>
+            </div>
+            <div class="form-field">
+              <label class="form-label" for="landing_pickup_time">Pickup time</label>
+              <select class="form-control" id="landing_pickup_time" name="pickup_time" data-today="{{ today }}" data-current-time="{{ current_time }}" data-weekday-slots='{{ weekday_pickup_slots|tojson }}' data-sunday-slots='{{ sunday_pickup_slots|tojson }}' required>
+                <option value="">Choose a date first</option>
+              </select>
+            </div>
+            <div class="form-section-heading">Pickup details</div>
+            <div class="form-field form-field--full">
+              <label class="form-label" for="landing_address">Pickup address</label>
+              <input class="form-control" id="landing_address" name="address" type="text" maxlength="300" autocomplete="street-address" required>
+            </div>
+            <div class="form-field form-field--full">
+              <label class="form-label" for="landing_contact">Contact number</label>
+              <input class="form-control" id="landing_contact" name="contact_number" type="tel" maxlength="30" autocomplete="tel" required>
+            </div>
+            <div class="form-field form-field--full price-preview" data-price-preview data-rate-select="landing_service_type" data-weight-input="landing_weight" data-per-kg-rate="{{ per_kg_rate }}" data-max-weight="{{ max_weight_kg }}">
+              <span data-price-message>Enter weight to see price. Maximum {{ max_weight_kg }} kg.</span>
+              <span>Service <strong data-price-base>—</strong></span>
+              <span>Weight charge <strong data-price-weight>—</strong></span>
+              <span>Estimated total <strong data-price-total>—</strong></span>
+              <small>Final price is confirmed after pickup and actual weighing.</small>
+            </div>
+          </div>
+          <div class="booking-form-actions">
+            <p class="form-help">Final price is the service starting rate plus ₱{{ "%.2f"|format(per_kg_rate) }} per kg.</p>
+            <button class="button button--primary" type="submit">Submit booking <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></button>
+          </div>
+        </form>
+      {% elif session.get('role') == 'admin' %}
+        <div class="section-heading">
+          <h3 class="card-heading">You're signed in as an administrator.</h3>
+          <p class="section-copy">Open the admin panel to review incoming bookings and update their status.</p>
+          <a class="button button--primary" href="{{ url_for('admin_dashboard') }}">Open admin panel</a>
+        </div>
+      {% else %}
+        <div class="section-heading">
+          <h3 class="card-heading">Sign in to book your pickup</h3>
+          <p class="section-copy">Choose the customer role to create bookings and track your laundry orders.</p>
+          <a class="button button--primary" href="{{ url_for('login_page') }}">Continue to account</a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

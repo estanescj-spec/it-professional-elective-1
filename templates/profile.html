@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}Profile | FreshNest Laundry{% endblock %}
+
+{% block content %}
+<section class="page-shell">
+  <div class="container">
+    <div class="page-heading">
+      <div>
+        <span class="eyebrow">Your account</span>
+        <h1 class="page-title">Profile</h1>
+        <p class="page-subtitle">Manage your contact details and keep your account secure.</p>
+      </div>
+      <a class="button button--secondary" href="{{ url_for('customer_dashboard') }}">My bookings</a>
+    </div>
+
+    <div class="dashboard-grid">
+      <section class="surface-card" aria-labelledby="profile-details-title">
+        <h2 class="card-heading" id="profile-details-title">Profile details</h2>
+        <p class="card-intro">Your saved pickup details make future bookings faster.</p>
+        <form class="stacked-form" action="{{ url_for('update_profile') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-field">
+            <label class="form-label" for="profile-name">Name</label>
+            <input class="form-control" id="profile-name" name="full_name" maxlength="80" value="{{ g.current_user['full_name'] }}" autocomplete="name" required>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="profile-email">Email address</label>
+            <input class="form-control" id="profile-email" type="email" value="{{ g.current_user['email'] }}" autocomplete="email" disabled>
+            <span class="form-help">Contact FreshNest if you need to change your email address.</span>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="profile-address">Saved address</label>
+            <input class="form-control" id="profile-address" name="saved_address" maxlength="300" value="{{ g.current_user['saved_address'] }}" autocomplete="street-address">
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="profile-contact">Saved contact number</label>
+            <input class="form-control" id="profile-contact" name="saved_contact_number" maxlength="30" value="{{ g.current_user['saved_contact_number'] }}" autocomplete="tel">
+          </div>
+          <button class="button button--primary" type="submit">Save profile</button>
+        </form>
+      </section>
+
+      <section class="surface-card" aria-labelledby="profile-password-title">
+        <h2 class="card-heading" id="profile-password-title">Change password</h2>
+        <p class="card-intro">Choose a password with at least 8 characters.</p>
+        <form class="stacked-form account-password-form" action="{{ url_for('change_password') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <div class="form-field">
+            <label class="form-label" for="current_password">Current password</label>
+            <input class="form-control" id="current_password" name="current_password" type="password" autocomplete="current-password" required>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="new_password">New password</label>
+            <input class="form-control" id="new_password" name="new_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+          </div>
+          <div class="form-field">
+            <label class="form-label" for="password-confirm">Confirm new password</label>
+            <input class="form-control" id="password-confirm" name="confirm_password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required>
+          </div>
+          <button class="button button--primary" type="submit">Change password</button>
+        </form>
+      </section>
+    </div>
+  </div>
+</section>
+{% endblock %}

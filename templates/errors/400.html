@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Bad request | FreshNest Laundry{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <div class="container">
+    <div class="auth-card error-card">
+      <span class="auth-icon"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i></span>
+      <h1 class="section-title">That request could not be verified</h1>
+      <p class="section-copy">{{ error.description or "The form may have expired. Please return and try again." }}</p>
+      <a class="button button--primary" href="{{ url_for('index') }}">Return to FreshNest</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

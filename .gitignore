@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.py[cod]
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+.env
+.env.*
+!.env.example
+data/backup_orders.json
+data/backups/
